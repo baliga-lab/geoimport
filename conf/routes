@@ -8,6 +8,7 @@ GET     /platforms/:query           controllers.Application.platforms(query: Str
 GET     /configs                    controllers.Application.configs
 POST    /configs/delete             controllers.Application.deleteConfig
 POST    /configs/save               controllers.Application.saveConfig
+POST    /startimport                controllers.Application.startImport
 
 # Map static resources from the /public folder to the /assets URL path
 GET     /assets/*file               controllers.Assets.at(path="/public", file)

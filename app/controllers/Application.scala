@@ -4,6 +4,14 @@ import play.api._
 import play.api.mvc._
 import play.api.data._
 import play.api.data.Forms._
+import play.api.libs.concurrent.Akka
+import play.api.Play.current
+
+import akka.actor._
+import akka.dispatch.Await
+import akka.pattern.ask
+import akka.util.Timeout
+import akka.util.duration._
 
 import models._
 import org.systemsbiology.services.eutils._
@@ -36,18 +44,22 @@ object Application extends Controller {
   }
   
   def index = Action {
-    Ok(views.html.index(Queries.allConfigs, null))
+    Ok(views.html.index(Queries.allConfigs, geoImportStatus, null))
   }
 
   def configs = Action {
     Ok(views.html.configlist(Queries.allConfigs))
+  }
+  def startImport = Action {
+    println("starting import...")
+    startGeoImport
+    Redirect(routes.Application.index)
   }
 
   def deleteConfig = Action { implicit request =>
     deleteForm.bindFromRequest.fold(
       errors => {
         println("BAD REQUEST: " + errors)
-        //BadRequest(views.html.index(Queries.allConfigs))
         Redirect(routes.Application.index)
       },
       id => {
@@ -63,8 +75,7 @@ object Application extends Controller {
     saveConfigForm.bindFromRequest.fold(
       errors => {
         println("BAD REQUEST !!!!: " + errors)
-        BadRequest(views.html.index(Queries.allConfigs, errors))
-        //Redirect(routes.Application.index)
+        BadRequest(views.html.index(Queries.allConfigs, geoImportStatus, errors))
       },
       params => {
         val (id, name, query, idcols) = params
@@ -80,5 +91,22 @@ object Application extends Controller {
   def platforms(query: String) = Action {
     val urls = getPlatforms(query).map(a => GEOFTPURLBuilder.urlSOFTByPlatform(a))
     Ok(views.html.platforms(query, urls))
+  }
+
+  private def geoImportStatus  = {
+    implicit val timeout = Timeout(5 seconds)
+    val future = importManager ? ImportStatus
+    Await.result(future, timeout.duration).asInstanceOf[GeoImportStatus]
+  }
+
+  private def startGeoImport = {
+    importManager ! StartImport
+  }
+
+  // start geoimport manager if not available yet
+  private def importManager = if (Akka.system.actorFor("user/geoimport").isTerminated) {
+      Akka.system.actorOf(Props[GeoImportManager], name="geoimport")
+  } else {
+    Akka.system.actorFor("user/geoimport")
   }
 }

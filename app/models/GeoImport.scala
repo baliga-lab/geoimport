@@ -3,7 +3,6 @@ package models
 import java.io.{File, BufferedReader, InputStreamReader, FileInputStream,
                 FileReader, BufferedWriter, FileWriter, PrintWriter}
 import java.util.zip._
-import java.util.logging._
 
 import scala.collection.mutable.{ArrayBuffer, HashSet, HashMap}
 //import scala.slick.driver.MySQLDriver.simple._
@@ -17,6 +16,8 @@ import org.scalaquery.session.{Database, Session}
 import org.systemsbiology.services.eutils._
 import org.systemsbiology.services.rsat._
 import org.systemsbiology.formats.microarray.soft._
+
+import play.api.Logger
 
 object ImportConfigs extends Table[(Long, String, String)]("import_configs") {
   def id = column[Long]("id", O.PrimaryKey,  O.AutoInc, O.NotNull)
@@ -66,7 +67,6 @@ object GeoImportQueries {
 }
 
 object GeoImport extends App {
-  val Log = Logger.getLogger("GeoImport")
   val DatabaseURL = "jdbc:mysql://localhost/geoimport?user=root&password=root&useUnicode=true&characterEncoding=utf8"
 
   private def getSummaries(query: String) = {
@@ -90,7 +90,7 @@ object GeoImport extends App {
   }
 
   private def mergeMatrices(matrices: Seq[DataMatrix]) = {
-    Log.info("# matrices collected: %d".format(matrices.length))
+    Logger.info("# matrices collected: %d".format(matrices.length))
     val allGenes = new HashSet[String]
     val allConditions = new ArrayBuffer[String]
     val gene2RowMaps = new ArrayBuffer[Map[String, Int]]
@@ -101,14 +101,14 @@ object GeoImport extends App {
       allConditions ++= matrix.sampleNames
       matrix.rowNames.foreach { row =>
         if (gene2Row.contains(row)) {
-          Log.warning("gene '%s' is redundant -> only one row will be used".format(row))
+          Logger.warn("gene '%s' is redundant -> only one row will be used".format(row))
         }
         gene2Row(row) = matrix.rowNames.indexOf(row)
       }
       gene2RowMaps += gene2Row.toMap
     }
 
-    Log.info("# genes: %d # conditions: %d\n".format(allGenes.size, allConditions.size))
+    Logger.info("# genes: %d # conditions: %d\n".format(allGenes.size, allConditions.size))
     val sortedGenes = allGenes.toSeq.sortWith((s1, s2) => s1 < s2)
     val mergedValues = Array.ofDim[Double](sortedGenes.length, allConditions.length)
 
@@ -133,13 +133,13 @@ object GeoImport extends App {
     DataMatrix(sortedGenes, allConditions, mergedValues)
   }
 
-  def mergeOrganism(config: ImportConfig) = {
+  def mergeOrganism(cachedir: File, outputdir: File, config: ImportConfig) = {
     val urls = getPlatforms(config.query).map(a => GEOFTPURLBuilder.urlSOFTByPlatform(a))
     val matrices = new ArrayBuffer[DataMatrix]
     //val synonyms = new RSATSynonymReader(new BufferedReader(
     //  new FileReader("/home/weiju/Projects/ISB/isb-dataformats/synf_feature_names.tab"))).synonyms
     urls.foreach { url =>
-      val file = SOFTReader.download(url, new File("cache"))
+      val file = SOFTReader.download(url, cachedir)
       var gzip: BufferedReader = null
       try {
         gzip = new BufferedReader(
@@ -148,23 +148,27 @@ object GeoImport extends App {
         if (matrix != null) matrices += matrix
       } catch {
         case e:Throwable =>
-          Log.log(Level.SEVERE,
-                  "error in processing - skipping file '%s'".format(file.getName), e)
+          Logger.error("error in processing - skipping file '%s'".format(file.getName), e)
       } finally {
         if (gzip != null) gzip.close
       }
     }
     var out : PrintWriter = null
     try {
-      out = new PrintWriter(new BufferedWriter(new FileWriter("%s_merged.csv".format(config.name))))
+      out = new PrintWriter(new BufferedWriter(new FileWriter(
+        new File(outputdir, "%s_merged.csv".format(config.name)))))
       val resultMatrix = mergeMatrices(matrices)
       resultMatrix.write(out)
     } finally {      
       if (out == null) out.close
     } 
   }
+
+  // for standalone applications
+  val cachedir = new File("cache")
+  val outputdir = new File("outputdir")
   Database.forURL(DatabaseURL, driver="com.mysql.jdbc.Driver") withSession { implicit db: Session =>
     val configs = GeoImportQueries.allConfigs
-    configs.foreach { config => mergeOrganism(config) }
+    configs.foreach { config => mergeOrganism(cachedir, outputdir, config) }
   }
 }
