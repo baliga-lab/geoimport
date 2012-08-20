@@ -1,0 +1,7 @@
+@(query: String, platforms: Seq[String])
+<div id="platforms">
+<h3>Platforms for '@query'</h3>
+  @platforms.map { platform =>
+    @platform<br>
+  }
+</div>

@@ -1,0 +1,143 @@
+@(configs: Seq[models.ImportConfig], saveForm: Form[(Option[Long], String, String, Option[String])])
+@import helper._
+
+@main("GEO Import Viewer") {
+  <script type="text/javascript">
+    var CONFIGS = {
+      @configs.map { config =>
+        @config.id : [ '@config.name', '@config.query', '@config.idColumns.mkString(", ")' ],
+      }
+    };
+    var ADD_TITLE = 'Add import configuration';
+    var EDIT_TITLE = 'Edit import configuration';
+
+    function showPlatformsForQuery(query) {
+      $('<div id="platforms">Querying GEO...<img src="@routes.Assets.at("images/ajax-loader.gif")"></div>').replaceAll('#platforms');
+      $.ajax({
+        url: '/platforms/' + query,
+        success: function(data) {
+          $(data).replaceAll('#platforms');
+        }
+      });
+    }
+
+    function installListeners() {
+      $('#addconfig').click(function () {
+        $('#saveid').val('');
+        $('#name').val('');
+        $('#query').val('');
+        $('#idcolumns').val('');
+
+        $('#addconfig-dialog').dialog('option', 'title', ADD_TITLE);
+        $('#addconfig-dialog').dialog('open');
+      });
+      $('.editconfig').click(function () {
+        var configId = $(this).closest('tr').attr('id').split('_')[1];
+        $('#saveid').val(configId);
+        $('#name').val(CONFIGS[configId][0]);
+        $('#query').val(CONFIGS[configId][1]);
+        $('#idcolumns').val(CONFIGS[configId][2]);
+
+        $('#addconfig-dialog').dialog('option', 'title', EDIT_TITLE);
+        $('#addconfig-dialog').dialog('open');
+        return false;
+      });
+      $('.deleteconfig').click(function () {
+        var configId = $(this).closest('tr').attr('id').split('_')[1];
+        $('#deleteid').val(configId);
+        $('#confirmdelete-dialog').dialog('open');
+      });
+    }
+    
+    $(document).ready(function () {
+      $('#addconfig-dialog').dialog({
+        autoOpen: false,
+        modal: true,
+        width: 350,
+        title: ADD_TITLE,
+        buttons: [
+          { text: 'Save',
+            click: function() {
+              $(this).dialog('close');
+              $('#saveform').submit();
+            }
+          },
+          { text: 'Cancel', click: function() { $(this).dialog('close'); } }
+        ]
+      });
+      $('#confirmdelete-dialog').dialog({
+        autoOpen: false,
+        modal: true,
+        buttons: [
+          { text: 'Ok',
+            click: function() {
+              $(this).dialog('close');
+              $('#deleteform').submit();
+            }
+          },
+          { text: 'Cancel', click: function() { $(this).dialog('close'); } }
+        ]
+      });
+      installListeners();
+      //showPlatformsForQuery(encodeURIComponent('synechococcus+elongatus+7942'));      
+    });
+  </script>
+} {
+  <div id="maincontainer">
+    <div id="topsection">
+       <div>
+         <img src="@routes.Assets.at("images/geo_main.gif")">
+         <img style="float: right" src="@routes.Assets.at("images/isb_logo.png")"></img></div>
+       <h1>GEO microarray data imports</h1>
+     </div>
+     <div id="mainsection">
+       @if(saveForm != null) {
+         <div style="width: 97%; border: 1px solid black; margin: 5px; padding: 5px; background-color: #ffffcc; border-radius: 5px;">
+         @saveForm.errors.map { error =>
+           <div style="color: red">@error.key: @error.message</div>
+         }
+         </div>
+       }
+       <h3>Import configurations</h3>
+       <div id="config-list">
+         <table class="data">
+           <thead>
+             <tr><th>ID</th><th>Name</th><th>Query</th><th>ID columns</th><th>Last generated</th><th>Last status</th><th>&nbsp;</th></tr>
+           </thead>
+           <tbody>
+             @configs.map { config =>
+             <tr id="row_@config.id"><td>@config.id</td><td>@config.name</td><td>@config.query</td><td>@(config.idColumns.mkString(", "))</td><td>-</td><td>-</td><td><a href="#" title="Download"><img style="width: 24px" src="@routes.Assets.at("images/floppy.png")"></img></a><a href="#" class="editconfig" title="Edit"><img style="width: 24px" src="@routes.Assets.at("images/pencil.png")"></img></a><a href="#" class="deleteconfig" title="Delete"><img style="width: 24px" src="@routes.Assets.at("images/trash.png")"></img></a></td></tr>
+             }
+           </tbody>
+         </table>
+       </div>
+
+       <div style="margin-top: 5px; margin-bottom: 5px;">
+         <input id="addconfig" type="submit" value="+ New Configuration"></input>
+       </div>
+       <p>&nbsp;</p>
+       <div id="platforms"></div>
+     </div>
+  </div>
+
+  <div id="addconfig-dialog" >
+    @form(routes.Application.saveConfig, 'id -> "saveform") {
+      <input type="hidden" id="saveid" name="id" />
+      <fieldset>
+        <label for="name">Name</label>
+        <input type="text" name="name" id="name" class="text ui-widget-content ui-corner-all" />
+        <label for="query">Query</label>
+        <input type="text" name="query" id="query" class="text ui-widget-content ui-corner-all" />
+        <label for="idcolumns">ID Column(s), comma separated</label>
+        <input type="text" name="idcolumns" id="idcolumns" class="text ui-widget-content ui-corner-all" />
+      </fieldset>
+    }
+  </div>
+
+  <div id="confirmdelete-dialog" title="Remove import configuration">
+    <p>Do you really want to delete this configuration ?</p>
+    @form(routes.Application.deleteConfig, 'id -> "deleteform") {
+      <input type="hidden" name="id" id="deleteid" value="4711">
+    }
+  </div>
+}
