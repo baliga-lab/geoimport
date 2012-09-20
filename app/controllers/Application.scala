@@ -13,6 +13,7 @@ import akka.pattern.ask
 import akka.util.Timeout
 import akka.util.duration._
 
+import java.io.{File}
 import models._
 import org.systemsbiology.services.eutils._
 
@@ -91,6 +92,17 @@ object Application extends Controller {
   def platforms(query: String) = Action {
     val urls = getPlatforms(query).map(a => GEOFTPURLBuilder.urlSOFTByPlatform(a))
     Ok(views.html.platforms(query, urls))
+  }
+
+  def downloadMatrix(organism: String) = Action {
+    val outputdir = new File("output")
+    val file = new File(outputdir, "%s_merged.csv".format(organism))
+    println("file: " + file.getPath)
+    if (file.exists) {
+      Ok.sendFile(file).as("text/plain")
+    } else {
+      Ok("no data for organism '%s'".format(organism)).as("text/plain")
+    }
   }
 
   private def geoImportStatus  = {

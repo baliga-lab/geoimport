@@ -122,7 +122,7 @@
            </thead>
            <tbody>
              @configs.map { config =>
-             <tr id="row_@config.id"><td>@config.id</td><td>@config.name</td><td>@config.query</td><td>@(config.idColumns.mkString(", "))</td><td>-</td><td>-</td><td><a href="#" title="Download"><img style="width: 24px" src="@routes.Assets.at("images/floppy.png")"></img></a><a href="#" class="editconfig" title="Edit"><img style="width: 24px" src="@routes.Assets.at("images/pencil.png")"></img></a><a href="#" class="deleteconfig" title="Delete"><img style="width: 24px" src="@routes.Assets.at("images/trash.png")"></img></a></td></tr>
+             <tr id="row_@config.id"><td>@config.id</td><td>@config.name</td><td>@config.query</td><td>@(config.idColumns.mkString(", "))</td><td>-</td><td>-</td><td><a href="@(routes.Application.downloadMatrix(config.name))" class="download" title="Download"><img style="width: 24px" src="@routes.Assets.at("images/floppy.png")"></img></a><a href="#" class="editconfig" title="Edit"><img style="width: 24px" src="@routes.Assets.at("images/pencil.png")"></img></a><a href="#" class="deleteconfig" title="Delete"><img style="width: 24px" src="@routes.Assets.at("images/trash.png")"></img></a></td></tr>
              }
            </tbody>
          </table>

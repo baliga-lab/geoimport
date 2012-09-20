@@ -9,6 +9,11 @@ import play.api.Play.current
 
 import models._
 
+// **************************************************
+// These actors define the import functionality
+// that runs asynchronously to the web application
+// **************************************************
+
 class GeoImportActor extends Actor {
   def receive = {
     case StartImport =>

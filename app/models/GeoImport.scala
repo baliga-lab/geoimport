@@ -19,6 +19,10 @@ import org.systemsbiology.formats.microarray.soft._
 
 import play.api.Logger
 
+// **************************************************
+// Data structures for GEO import
+// **************************************************
+
 object ImportConfigs extends Table[(Long, String, String)]("import_configs") {
   def id = column[Long]("id", O.PrimaryKey,  O.AutoInc, O.NotNull)
   def name = column[String]("name", O.NotNull)
@@ -65,6 +69,10 @@ object GeoImportQueries {
     configs
   }
 }
+
+// **************************************************
+// Import functionality for GEO import
+// **************************************************
 
 object GeoImport extends App {
   val DatabaseURL = "jdbc:mysql://localhost/geoimport?user=root&password=root&useUnicode=true&characterEncoding=utf8"

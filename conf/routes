@@ -6,6 +6,7 @@
 GET     /                           controllers.Application.index
 GET     /platforms/:query           controllers.Application.platforms(query: String)
 GET     /configs                    controllers.Application.configs
+GET     /matrix/:organism           controllers.Application.downloadMatrix(organism: String)
 POST    /configs/delete             controllers.Application.deleteConfig
 POST    /configs/save               controllers.Application.saveConfig
 POST    /startimport                controllers.Application.startImport
